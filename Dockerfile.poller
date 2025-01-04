@@ -1,0 +1,19 @@
+FROM selenium/standalone-firefox:latest
+
+RUN sudo apt update
+RUN sudo apt install pipx -y
+RUN pipx ensurepath
+RUN pipx install poetry
+ENV PATH="${PATH}:${HOME}/.local/bin"
+
+WORKDIR /home/seluser/app
+RUN mkdir ./src
+RUN mkdir ./logs
+RUN mkdir ./data
+RUN chmod -R a+rw ./data
+COPY ./src ./src
+COPY pyproject.toml ./
+RUN poetry install --sync --with poller
+
+EXPOSE 8501
+CMD ["poetry", "run", "python", "src/creator_poller.py"]

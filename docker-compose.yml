@@ -1,0 +1,27 @@
+services:
+  streamlit-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data:r
+  pollers:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.poller
+    environment:
+      - EMAIL=email
+      - PASSWORD=password
+    volumes:
+      - data-volume:/home/seluser/app/data:rw
+volumes:
+  data-volume:
+    name: data
+    driver: local
+    driver_opts:
+      type: none
+      device: "./data"
+      o: bind

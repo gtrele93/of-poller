@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "of-poller"
+version = "0.1.0"
+description = "Polls OF models to check if they're online"
+authors = []
+license = "MIT"
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic = "^2.10.4"
+tables = "^3.10.1"
+pyyaml = "^6.0.2"
+
+[tool.poetry.group.app]
+optional = true
+
+[tool.poetry.group.app.dependencies]
+streamlit = "^1.41.1"
+plotly = "^5.24.1"
+pandas = "^2.2.3"
+
+[tool.poetry.group.poller]
+optional = true
+
+[tool.poetry.group.poller.dependencies]
+selenium = "^4.27.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
