@@ -111,7 +111,7 @@ class CreatorPoller:
             except WebDriverException as e:
                 self.logger.error(f"WebDriverException while checking {self.creator} online status. Exception: {e}")
                 self.logger.info(f"Restarting {self.creator} WebDriver")
-                self.driver = CreatorPoller._driver_init()
+                self.driver = self._driver_init()
 
     async def get_creator_online_status(self):
         await asyncio.gather(*[self.get_page_online_status(page) for page in self.pages])
