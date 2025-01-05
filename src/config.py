@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 
+GECKODRIVER_PATH = "/usr/bin/geckodriver"
 EMAIL = os.environ.get("EMAIL")
 PASSWORD = os.environ.get("PASSWORD")
 LOG_LEVEL = "INFO"
@@ -8,6 +9,7 @@ BIN_LENGTH_S = 60
 WRITE_TIMER = 60
 POLLING_INTERVAL = 10
 WEB_DRIVER_TIMEOUT = 4
+RETRIES = 10
 data_file_path = Path(__file__).parent.parent.resolve() / "data" / "data.h5"
 log_file_path = Path(__file__).parent.parent.resolve() / "logs" / "log.log"
 creators_file_path = Path(__file__).parent.parent.resolve() / "src" / "creators.yaml"

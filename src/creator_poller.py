@@ -8,19 +8,17 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 import os
-from config import WRITE_TIMER, POLLING_INTERVAL, data_file_path, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD
+from config import WRITE_TIMER, POLLING_INTERVAL, data_file_path, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD, GECKODRIVER_PATH, RETRIES
 from utils import get_creator_config
-import asyncio
 import tables as tb
 import time
 import logging
 from logger import logger as default_logger
 from pydantic import BaseModel
-from asyncio.queues import Queue as asyncioQueue
-
+import multiprocessing as mp
 
 module_logger = logging.getLogger(f"{default_logger.name}.creator_poller")
-async_queue = asyncioQueue()
+queue = mp.Queue()
 
 
 class H5Data(tb.IsDescription):
@@ -38,7 +36,7 @@ class PollerData(BaseModel):
 
 
 class CreatorPoller:
-    def __init__(self, creator: str, pages: list[str], queue: asyncioQueue):
+    def __init__(self, creator: str, pages: list[str], queue: mp.Queue):
         self.logger = logging.getLogger(f"{module_logger.name}.{self.__class__.__name__}")
         self.logger.info("Initializing CreatorPoller for creator %s" % creator)
         self.logger.debug("Initializing CreatorPoller for creator %s with pages %s" % (creator, pages))
@@ -69,14 +67,14 @@ class CreatorPoller:
         os.environ["MOZ_HEADLESS"] = "1"
         options = Options()
         options.headless = True
-        service = Service(executable_path='/usr/bin/geckodriver')
+        service = Service(executable_path=GECKODRIVER_PATH)
         driver = webdriver.Firefox(options=options, service=service)
         driver.get("https://www.onlyfans.com")
         self._driver_login(driver)
         self.logger.debug("Correctly initialized driver")
         return driver
 
-    async def get_page_online_status(self, page):
+    def get_page_online_status(self, page):
         self.logger.info(f"Checking page {page}")
         while True:
             try:
@@ -88,7 +86,7 @@ class CreatorPoller:
                     )
                     self.logger.debug("Page %s: %s" % (page, res.get_attribute('class')))
                     # Wait for the online status to update
-                    await asyncio.sleep(POLLING_INTERVAL)
+                    time.sleep(POLLING_INTERVAL)
                     try:
                         # Fetch the online status element again in case it has changed in the meantime
                         res = self.driver.find_element(By.CSS_SELECTOR, "a.online_status_class")
@@ -105,7 +103,7 @@ class CreatorPoller:
                         page=page,
                         online=is_online
                     )
-                    await self.queue.put(data_point)
+                    self.queue.put(data_point)
                 except TimeoutException:
                     self.logger.info(f"Timeout while waiting for a.online_status_class for creator {self.creator}")
             except WebDriverException as e:
@@ -113,9 +111,18 @@ class CreatorPoller:
                 self.logger.info(f"Restarting {self.creator} WebDriver")
                 self.driver = self._driver_init()
 
-    async def get_creator_online_status(self):
-        await asyncio.gather(*[self.get_page_online_status(page) for page in self.pages])
-        self.driver.close()
+    @classmethod
+    def get_creator_online_status(cls, creator: str, pages: list[str], queue: mp.Queue):
+        poller = cls(creator, pages, queue)
+        processes = []
+        for page in pages:
+            p = mp.Process(target=poller.get_page_online_status, args=(page,))
+            p.start()
+            processes.append(p)
+        for p in processes:
+            p.join()
+        # await asyncio.gather(*[self.get_page_online_status(page) for page in self.pages])
+        poller.driver.close()
 
 
 def init_data_file():
@@ -131,14 +138,14 @@ def init_data_file():
     file.close()
 
 
-async def write_to_data(queue):
+def write_to_data(queue):
     module_logger.debug("Started service to write events to data file")
     buffer = []
     start = time.monotonic()
     while True:
         if (time.monotonic() - start) < WRITE_TIMER:
             module_logger.debug("Listening to queue for data events")
-            data : PollerData = await queue.get()
+            data : PollerData = queue.get()
             buffer.append(data)
             module_logger.debug(f"Appended data event to buffer: {data}")
         else:
@@ -167,28 +174,34 @@ async def write_to_data(queue):
                 file.close()
 
 
-async def check_all_creators_online_status():
+def check_all_creators_online_status():
     init_data_file()
-    creator_pollers = []
+    processes = []
     creator_config = get_creator_config()
-    for creator in creator_config.creators:
-        while True:
-            # Sometimes OF gives an error page, keep trying until you get a login page
-            try:
-                creator_pollers.append(CreatorPoller(creator, creator_config.get_pages(creator), async_queue))
-                break
-            except Exception as e:
-                module_logger.error(f"Exception while creating poller for creator {creator}: {type(e)} {e}")
-                continue
     try:
-        await asyncio.gather(*[poller.get_creator_online_status() for poller in creator_pollers], write_to_data(async_queue))
+        for creator in creator_config.creators:
+            retries = 0
+            while retries < RETRIES:
+                # Sometimes OF gives an error page, keep trying until you get a login page
+                try:
+                    p = mp.Process(target=CreatorPoller.get_creator_online_status, args=(creator, creator_config.get_pages(creator), queue))
+                    p.start()
+                    processes.append(p)
+                    # creator_pollers.append(CreatorPoller(creator, creator_config.get_pages(creator), queue))
+                    break
+                except Exception as e:
+                    module_logger.error(f"Exception while creating poller for creator {creator}: {type(e)} {e}")
+                    retries += 1
+        for p in processes:
+            p.join()
+        # await asyncio.gather(*[poller.get_creator_online_status() for poller in creator_pollers], write_to_data(queue))
     except Exception as e:
         module_logger.error(f"Exception while awaiting pollers: {type(e)} {e}")
 
 
-def start_all_pollers():
-    asyncio.run(check_all_creators_online_status())
+# def start_all_pollers():
+#     asyncio.run(check_all_creators_online_status())
 
 
 if __name__ == "__main__":
-    start_all_pollers()
+    check_all_creators_online_status()
