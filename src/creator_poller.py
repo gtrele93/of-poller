@@ -1,14 +1,5 @@
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from datetime import datetime, UTC
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
-import os
-from config import WRITE_TIMER, POLLING_INTERVAL, data_file_path, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD
+from config import WRITE_TIMER, STATUS_POLLING_WAIT, data_file_path, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD
 from utils import get_creator_config
 import asyncio
 import tables as tb
@@ -17,6 +8,9 @@ import logging
 from logger import logger as default_logger
 from pydantic import BaseModel
 from asyncio.queues import Queue as asyncioQueue
+from playwright.async_api import async_playwright
+from playwright.sync_api import sync_playwright
+import playwright.async_api as playwright
 
 
 module_logger = logging.getLogger(f"{default_logger.name}.creator_poller")
@@ -42,80 +36,78 @@ class CreatorPoller:
         self.logger = logging.getLogger(f"{module_logger.name}.{self.__class__.__name__}")
         self.logger.info("Initializing CreatorPoller for creator %s" % creator)
         self.logger.debug("Initializing CreatorPoller for creator %s with pages %s" % (creator, pages))
-        self.driver = self._driver_init()
         self.creator = creator
         self.pages = pages
         self.queue = queue
 
-    def _driver_login(self, driver):
+    async def login(self, page: playwright.Page):
         self.logger.debug("Logging in to OnlyFans")
+        email = page.locator('[name="email"]')
+        password = page.locator('[name="password"]')
         try:
-            email = WebDriverWait(driver, WEB_DRIVER_TIMEOUT).until(
-                EC.presence_of_element_located((By.NAME, "email"))
-            )
-            password = WebDriverWait(driver, WEB_DRIVER_TIMEOUT).until(
-                EC.presence_of_element_located((By.NAME, "password"))
-            )
-            email.clear()
-            email.send_keys(EMAIL)
-            password.clear()
-            password.send_keys(PASSWORD)
-            password.send_keys(Keys.RETURN)
+            await email.wait_for(timeout=WEB_DRIVER_TIMEOUT*1000, state="visible")
+            await password.wait_for(timeout=WEB_DRIVER_TIMEOUT*1000, state="visible")
+            await email.clear()
+            await email.fill(value=EMAIL)
+            await password.clear()
+            await password.fill(value=PASSWORD)
+            await password.press("Enter")
             self.logger.debug("Logged in to OnlyFans")
-        except TimeoutException:
-            self.logger.info("Timeout while waiting for email and password fields")
+        except playwright.TimeoutError:
+            self.logger.warning("Timeout while logging in to OnlyFans")
 
-    def _driver_init(self):
-        os.environ["MOZ_HEADLESS"] = "1"
-        options = Options()
-        options.headless = True
-        service = Service(executable_path='/usr/bin/geckodriver')
-        driver = webdriver.Firefox(options=options, service=service)
-        driver.get("https://www.onlyfans.com")
-        self._driver_login(driver)
-        self.logger.debug("Correctly initialized driver")
-        return driver
-
-    async def get_page_online_status(self, page):
-        self.logger.info(f"Checking page {page}")
+    async def get_page_online_status(self, browser: playwright.Browser, page_url: str):
+        self.logger.info("Checking page %s" % page_url)
+        page : playwright.Page = await browser.new_page()
+        await page.goto(page_url)
+        await self.login(page)
         while True:
             try:
+                self.logger.debug("Reloading page %s" % page_url)
+                await page.goto(page_url)
                 is_online = False
-                self.driver.get(page)
-                try:
-                    res = WebDriverWait(self.driver, WEB_DRIVER_TIMEOUT).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, "a.online_status_class"))
-                    )
-                    self.logger.debug("Page %s: %s" % (page, res.get_attribute('class')))
-                    # Wait for the online status to update
-                    await asyncio.sleep(POLLING_INTERVAL)
-                    try:
-                        # Fetch the online status element again in case it has changed in the meantime
-                        res = self.driver.find_element(By.CSS_SELECTOR, "a.online_status_class")
-                        self.logger.debug("Page %s: %s" % (page, res.get_attribute('class')))
-                        self.driver.find_element(By.CSS_SELECTOR, "a.online")
-                        self.logger.info(f"{self.creator} is online on page {page}")
-                        is_online = True
-                    except NoSuchElementException:
-                        self.logger.info(f"{self.creator} is offline on page {page}")
-                        is_online = False
-                    data_point = PollerData(
-                        datetime=datetime.now(UTC),
-                        creator=self.creator,
-                        page=page,
-                        online=is_online
-                    )
-                    await self.queue.put(data_point)
-                except TimeoutException:
-                    self.logger.info(f"Timeout while waiting for a.online_status_class for creator {self.creator}")
-            except WebDriverException as e:
-                self.logger.error(f"WebDriverException while checking {self.creator} online status. Exception: {e}")
-                self.logger.info(f"Restarting {self.creator} WebDriver")
-                self.driver = self._driver_init()
+            except playwright.TimeoutError:
+                self.logger.error("Timeout while opening page %s, recreating page" % page_url)
+                await page.close()
+                page = await browser.new_page()
+                await page.goto(page_url)
+                await self.login(page)
+                continue
+            try:
+                locator = page.locator("a.online_status_class").first
+                await locator.wait_for(timeout=STATUS_POLLING_WAIT*1000, state="visible")
+                self.logger.debug("Found online_status_class element for page %s" % page_url)
+            except playwright.TimeoutError:
+                self.logger.warning("Timeout while waiting for a.online_status_class for page %s, recreating page" % page_url)
+                await page.close()
+                page = await browser.new_page()
+                await page.goto(page_url)
+                await self.login(page)
+                continue
+            # Fetch the online status element
+            # Have to wait a bit for the element to be visible
+            locator_online = page.locator("a.online").first
+            try:
+                await locator_online.wait_for(timeout=STATUS_POLLING_WAIT*1000, state="visible")
+                self.logger.debug("Found online element for page %s" % page_url)
+                self.logger.info("%s is online on page %s" % (self.creator, page_url))
+                is_online = True
+            except playwright.TimeoutError:
+                self.logger.debug("Timeout while waiting for a.online for page %s" % page_url)
+                self.logger.info("%s is offline on page %s" % (self.creator, page_url))
+                is_online = False
+            data_point = PollerData(
+                datetime=datetime.now(UTC),
+                creator=self.creator,
+                page=page.url,
+                online=is_online
+            )
+            await self.queue.put(data_point)
 
     async def get_creator_online_status(self):
-        await asyncio.gather(*[self.get_page_online_status(page) for page in self.pages])
-        self.driver.close()
+        async with async_playwright() as p:
+            browser = await p.firefox.launch()
+            await asyncio.gather(*[self.get_page_online_status(browser, page_url) for page_url in self.pages])
 
 
 def init_data_file():
@@ -126,7 +118,7 @@ def init_data_file():
             creator_group = file.create_group("/", creator, creator)
             file.create_table(creator_group, "data", H5Data, "Data")
         except tb.exceptions.NodeError as e:
-            module_logger.error(f"Error when initializing data file. NodeError: {e}")
+            module_logger.warning("Error when initializing data file. NodeError: %s" % e)
     module_logger.debug("Created/Opened data file")
     file.close()
 
@@ -140,7 +132,7 @@ async def write_to_data(queue):
             module_logger.debug("Listening to queue for data events")
             data : PollerData = await queue.get()
             buffer.append(data)
-            module_logger.debug(f"Appended data event to buffer: {data}")
+            module_logger.debug("Appended data event to buffer: %s" % data)
         else:
             if buffer:
                 module_logger.info("Buffer is not empty, writing data to file")
@@ -148,22 +140,22 @@ async def write_to_data(queue):
                 try:
                     creators_set = {event.creator for event in buffer}
                     for creator in creators_set:
-                        module_logger.info(f"Writing data for creator {creator} to file")
+                        module_logger.info("Writing data for creator %s to file" % creator)
                         table : tb.Table = file.get_node(f"/{creator}/data")
-                        module_logger.debug(f"For creator {creator}, got table {table}")
+                        module_logger.debug("For creator %s, got table %s" % (creator, table))
                         for event in filter(lambda e: creator == e.creator, buffer):
-                            module_logger.debug(f"Writing event {event} to table")
+                            module_logger.debug("Writing event %s to table" % event)
                             table.row['datetime'] = int(event.datetime.timestamp())
                             table.row['creator'] = event.creator
                             table.row['page'] = event.page
                             table.row['online'] = event.online
                             table.row.append()
                         table.flush()
-                        module_logger.debug(f"Wrote data for creator {creator}")
+                        module_logger.debug("Wrote data for creator %s to file" % creator)
                     start = time.monotonic()
                     buffer.clear()
                 except Exception as e:
-                    module_logger.error(f"Error while writing to file. Exception: {type(e)} {e}")
+                    module_logger.error("Error while writing to file. Exception: %s %s" % (type(e), e))
                 file.close()
 
 
@@ -178,12 +170,13 @@ async def check_all_creators_online_status():
                 creator_pollers.append(CreatorPoller(creator, creator_config.get_pages(creator), async_queue))
                 break
             except Exception as e:
-                module_logger.error(f"Exception while creating poller for creator {creator}: {type(e)} {e}")
+                module_logger.error("Exception while creating poller for creator %s: %s %s" % (creator, type(e), e))
                 continue
     try:
         await asyncio.gather(*[poller.get_creator_online_status() for poller in creator_pollers], write_to_data(async_queue))
     except Exception as e:
-        module_logger.error(f"Exception while awaiting pollers: {type(e)} {e}")
+        module_logger.error("Exception while awaiting pollers: %s %s" % (type(e), e))
+        raise e
 
 
 def start_all_pollers():

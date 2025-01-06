@@ -6,7 +6,6 @@ authors = []
 license = "MIT"
 package-mode = false
 
-
 [tool.poetry.dependencies]
 python = "^3.12"
 pydantic = "^2.10.4"
@@ -25,7 +24,7 @@ pandas = "^2.2.3"
 optional = true
 
 [tool.poetry.group.poller.dependencies]
-selenium = "^4.27.1"
+playwright = "^1.49.1"
 
 [build-system]
 requires = ["poetry-core"]

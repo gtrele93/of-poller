@@ -1,12 +1,12 @@
-FROM selenium/standalone-firefox:latest
+FROM mcr.microsoft.com/playwright/python:v1.49.1-noble
 
-RUN sudo apt update
-RUN sudo apt install pipx -y
+RUN apt update
+RUN apt install pipx -y
 RUN pipx ensurepath
 RUN pipx install poetry
-ENV PATH="${PATH}:${HOME}/.local/bin"
+ENV PATH="${PATH}:/root/.local/bin"
 
-WORKDIR /home/seluser/app
+WORKDIR /app
 RUN mkdir ./src
 RUN mkdir ./logs
 RUN mkdir ./data
@@ -15,5 +15,4 @@ COPY ./src ./src
 COPY pyproject.toml ./
 RUN poetry install --sync --with poller
 
-EXPOSE 8501
 CMD ["poetry", "run", "python", "src/creator_poller.py"]
