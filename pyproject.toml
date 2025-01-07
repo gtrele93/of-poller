@@ -11,6 +11,7 @@ python = "^3.12"
 pydantic = "^2.10.4"
 tables = "^3.10.1"
 pyyaml = "^6.0.2"
+redis = "^5.2.1"
 
 [tool.poetry.group.app]
 optional = true
@@ -25,6 +26,14 @@ optional = true
 
 [tool.poetry.group.poller.dependencies]
 playwright = "^1.49.1"
+redis = "^5.2.1"
+msgpack = "^1.1.0"
+
+[tool.poetry.group.writer]
+optional = true
+
+[tool.poetry.group.writer.dependencies]
+msgpack = "^1.1.0"
 
 [build-system]
 requires = ["poetry-core"]

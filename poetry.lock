@@ -37,13 +37,13 @@ files = [
 
 [[package]]
 name = "anyio"
-version = "4.7.0"
+version = "4.8.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "anyio-4.7.0-py3-none-any.whl", hash = "sha256:ea60c3723ab42ba6fff7e8ccb0488c898ec538ff4df1f1d5e642c3601d07e352"},
-    {file = "anyio-4.7.0.tar.gz", hash = "sha256:2f834749c602966b7d456a7567cafcb309f96482b5081d14ac93ccd457f9dd48"},
+    {file = "anyio-4.8.0-py3-none-any.whl", hash = "sha256:b5011f270ab5eb0abf13385f851315585cc37ef330dd88e27ec3d34d651fd47a"},
+    {file = "anyio-4.8.0.tar.gz", hash = "sha256:1d9fe889df5212298c0c0723fa20479d1b94883a2df44bd3897aa91083316f7a"},
 ]
 
 [package.dependencies]
@@ -53,7 +53,7 @@ typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 doc = ["Sphinx (>=7.4,<8.0)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx_rtd_theme"]
-test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "pytest-mock (>=3.6.1)", "trustme", "truststore (>=0.9.1)", "uvloop (>=0.21)"]
+test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypothesis (>=4.0)", "psutil (>=5.9)", "pytest (>=7.0)", "trustme", "truststore (>=0.9.1)", "uvloop (>=0.21)"]
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
@@ -692,21 +692,24 @@ files = [
 
 [[package]]
 name = "narwhals"
-version = "1.20.1"
+version = "1.21.0"
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "narwhals-1.20.1-py3-none-any.whl", hash = "sha256:77fc10fed31534a4ecf0c5e1e091c91c454cb2fa73937f36be3fcb0c2dfdabc6"},
-    {file = "narwhals-1.20.1.tar.gz", hash = "sha256:ffc6a44c1bc651531198c5f7fc38d349dff898ecfe51c1ef96aaaf429ec4dc19"},
+    {file = "narwhals-1.21.0-py3-none-any.whl", hash = "sha256:99943b477712f174cc79f7e6bc468b0abd2f0bd958483d3a476c84b16fdfd465"},
+    {file = "narwhals-1.21.0.tar.gz", hash = "sha256:3373469df8a360f2e3aafaac263a8181f802c17eea166c819e0483498fd347f8"},
 ]
 
 [package.extras]
+core = ["duckdb", "pandas", "polars", "pyarrow", "pyarrow-stubs"]
 cudf = ["cudf (>=24.10.0)"]
-dask = ["dask[dataframe] (>=2024.7)"]
-dev = ["covdefaults", "duckdb", "hypothesis[numpy]", "pandas", "polars", "pre-commit", "pyarrow", "pyarrow-stubs", "pytest", "pytest-cov", "pytest-env", "pytest-randomly", "tqdm", "typing-extensions"]
+dask = ["dask[dataframe] (>=2024.8)"]
+dev = ["covdefaults", "hypothesis", "pre-commit", "pytest", "pytest-cov", "pytest-env", "pytest-randomly", "typing-extensions"]
 docs = ["black", "duckdb", "jinja2", "markdown-exec[ansi]", "mkdocs", "mkdocs-autorefs", "mkdocs-material", "mkdocstrings[python]", "pandas", "polars (>=1.0.0)", "pyarrow"]
-extra = ["dask[dataframe]", "modin", "pyspark", "scikit-learn"]
+duckdb = ["duckdb (>=1.0)"]
+extra = ["scikit-learn"]
+ibis = ["ibis-framework (>=6.0.0)", "packaging", "pyarrow-hotfix", "rich"]
 modin = ["modin"]
 pandas = ["pandas (>=0.25.3)"]
 polars = ["polars (>=0.20.3)"]
@@ -1359,13 +1362,13 @@ dev = ["black", "build", "flake8", "flake8-black", "isort", "jupyter-console", "
 
 [[package]]
 name = "pygments"
-version = "2.18.0"
+version = "2.19.0"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pygments-2.18.0-py3-none-any.whl", hash = "sha256:b8e6aca0523f3ab76fee51799c488e38782ac06eafcf95e7ba832985c8e7b13a"},
-    {file = "pygments-2.18.0.tar.gz", hash = "sha256:786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199"},
+    {file = "pygments-2.19.0-py3-none-any.whl", hash = "sha256:4755e6e64d22161d5b61432c0600c923c5927214e7c956e31c23923c89251a9b"},
+    {file = "pygments-2.19.0.tar.gz", hash = "sha256:afc4146269910d4bdfabcd27c24923137a74d562a23a320a41a55ad303e19783"},
 ]
 
 [package.extras]
@@ -1457,6 +1460,21 @@ files = [
     {file = "PyYAML-6.0.2-cp39-cp39-win_amd64.whl", hash = "sha256:39693e1f8320ae4f43943590b49779ffb98acb81f788220ea932a6b6c51004d8"},
     {file = "pyyaml-6.0.2.tar.gz", hash = "sha256:d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"},
 ]
+
+[[package]]
+name = "redis"
+version = "5.2.1"
+description = "Python client for Redis database and key-value store"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "redis-5.2.1-py3-none-any.whl", hash = "sha256:ee7e1056b9aea0f04c6c2ed59452947f34c4940ee025f5dd83e6a6418b6989e4"},
+    {file = "redis-5.2.1.tar.gz", hash = "sha256:16f2e22dff21d5125e8481515e386711a34cbec50f0e44413dd7d9c060a54e0f"},
+]
+
+[package.extras]
+hiredis = ["hiredis (>=3.0.0)"]
+ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==23.2.1)", "requests (>=2.31.0)"]
 
 [[package]]
 name = "referencing"
@@ -1694,27 +1712,27 @@ snowflake = ["snowflake-connector-python (>=2.8.0)", "snowflake-snowpark-python[
 
 [[package]]
 name = "tables"
-version = "3.10.1"
+version = "3.10.2"
 description = "Hierarchical datasets for Python"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.11"
 files = [
-    {file = "tables-3.10.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bca9d11a570ca1bc57f0845e54e55c3093d5a1ace376faee639e09503a73745b"},
-    {file = "tables-3.10.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b62881cb682438d1e92b9178db42b160638aef3ca23341f7d98e9b27821b1eb4"},
-    {file = "tables-3.10.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f9cf1bfd8b0e0195196205fc8a134628219cff85d20da537facd67a291e6b347"},
-    {file = "tables-3.10.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:77f0e6dd45b91d99bf3976c8655c48fe3816baf390b9098e4fb2f0fdf9da7078"},
-    {file = "tables-3.10.1-cp310-cp310-win_amd64.whl", hash = "sha256:d90542ec172d1d60df0b796c48ad446f2b69a5d5cd3077bd6450891b854d1ffb"},
-    {file = "tables-3.10.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:f8917262a2bb3cd79d37e108557e34ec4b365fdcc806e01dd10765a84c65dab6"},
-    {file = "tables-3.10.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f93f6db623b484bb6606537c2a71e95ee34fae19b0d891867642dd8c7be05af6"},
-    {file = "tables-3.10.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:01ca51624bca1a87e703d6d6b796368bc3460ff007ea8b1341be03bedd863833"},
-    {file = "tables-3.10.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9372516c76be3a05a573df63a69ce38315d03b5816d2a1e89c48129ec8b161b0"},
-    {file = "tables-3.10.1-cp311-cp311-win_amd64.whl", hash = "sha256:09190fb504888aeacafb7739c13d5c5a3e87af3d261f4d2f832b1f8407be133a"},
-    {file = "tables-3.10.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:a7090af37909e3bf229d5599fa442633e5a93b6082960b01038dc0106e07a8da"},
-    {file = "tables-3.10.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:203ed50c0c5f30f007df7633089b2a567b99856cd25d68f19d91624a8db2e7ad"},
-    {file = "tables-3.10.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e36ce9f10471c69c1f0b06c6966de762558a35d62592c55df7994a8019adaf0c"},
-    {file = "tables-3.10.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f233e78cc9fa4157ec4c3ef2abf01a731fe7969bc6ed73539e5f4cd3b94c98b2"},
-    {file = "tables-3.10.1-cp312-cp312-win_amd64.whl", hash = "sha256:34357d2f2f75843a44e6fe54d1f11fc2e35a8fd3cb134df3d3362cff78010adb"},
-    {file = "tables-3.10.1.tar.gz", hash = "sha256:4aa07ac734b9c037baeaf44aec64ec902ad247f57811b59f30c4e31d31f126cf"},
+    {file = "tables-3.10.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:63f8adec3c4421a011c5c6a245c0c1fccf16dba7aaa67d9915d2821cf365ed4a"},
+    {file = "tables-3.10.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:34c120bff666d33d3bdfb9e33173a4869d5f34e6c87824f2c7ec6a72c8dfab82"},
+    {file = "tables-3.10.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e71f63ac67c583ac42943c99c2d33bcc9e361e94d1ab1a763dc0698bdd9ff815"},
+    {file = "tables-3.10.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:154773f97763ccc91a29bcead6ab7b5ef164c2ed8c409cd79a2115aa9b4184c9"},
+    {file = "tables-3.10.2-cp311-cp311-win_amd64.whl", hash = "sha256:96b5e945d275415e79ddb0578657ecc6ac77030dcc0632ab2c39f89390bb239d"},
+    {file = "tables-3.10.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:c6ba58205d1f6a4e0e2212bc221e76cf104f22190f90c3f1683f3c1ab138f28f"},
+    {file = "tables-3.10.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:cdb5c040aa43e5e96259d6f6bb9df5b66fef2b071a6eb035c21bf6508e865d40"},
+    {file = "tables-3.10.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e694123fa886d9be57f55fc7e1dcacac49f0b4ed4a931c795bd8f82f7111b5a8"},
+    {file = "tables-3.10.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f6c12d0d04de89297763923ebeaddfd7e0b51f29041895db284fd4913e7448b7"},
+    {file = "tables-3.10.2-cp312-cp312-win_amd64.whl", hash = "sha256:a406d5dbbcb6604bd1ca129af337e0790d4e02d29d06159ddb9f74e38d756d32"},
+    {file = "tables-3.10.2-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:7b8bc07c715bad3d447ed8f834388ef2e10265e2c4af6b1297fc61adb645948f"},
+    {file = "tables-3.10.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:28677ed8e1a371471495599078f48da0850f82457d6c852ca77959c974371140"},
+    {file = "tables-3.10.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:aaaea478dcf27dd54679ef2643c26d3b8b15676ad81e4d80a88fd1682d23deb1"},
+    {file = "tables-3.10.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c5e67a9f901842f9a4b1f3d2307f4bdd94047514fe0d0c558ed19c11f53c402a"},
+    {file = "tables-3.10.2-cp313-cp313-win_amd64.whl", hash = "sha256:5637fdcded5ba5426aa24e0e42d6f990926a4da7f193830df131dfcb7e842900"},
+    {file = "tables-3.10.2.tar.gz", hash = "sha256:2544812a7186fadba831d6dd34eb49ccd788d6a83f4e4c2b431b835b6796c910"},
 ]
 
 [package.dependencies]
@@ -1724,9 +1742,6 @@ numpy = ">=1.20.0"
 packaging = "*"
 py-cpuinfo = "*"
 typing-extensions = ">=4.4.0"
-
-[package.extras]
-doc = ["ipython", "numpydoc", "sphinx (>=1.1,<6)", "sphinx-rtd-theme"]
 
 [[package]]
 name = "tenacity"
@@ -1858,4 +1873,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "5f6774609c5b5c015eb81e77c7d6255ebdc5d3fcf3d4817e67c2eaa9424a3a5d"
+content-hash = "f552325517a8329948c7cf8816acfc453561ebd60b9e372075efa7b54ccc30b4"

@@ -6,17 +6,37 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./data:/app/data:r
+      - data-volume:/app/data:r
+  redis:
+    image: redis:7.0.7-alpine3.17
+    restart: unless-stopped
+    command: redis-server --loglevel warning
+    networks:
+      - redis_net
+  writer:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.writer
+    depends_on:
+      - redis
+    volumes:
+      - data-volume:/app/data:rw
+    networks:
+      - redis_net
   pollers:
-    restart: always
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile.poller
     environment:
       - EMAIL=email
       - PASSWORD=password
-    volumes:
-      - data-volume:/home/seluser/app/data:rw
+    depends_on:
+      - redis
+      - writer
+    networks:
+      - redis_net
 volumes:
   data-volume:
     name: data
@@ -25,3 +45,6 @@ volumes:
       type: none
       device: "./data"
       o: bind
+networks:
+  redis_net:
+    driver: bridge

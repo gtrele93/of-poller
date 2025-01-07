@@ -171,6 +171,7 @@ cython_debug/
 .pypirc
 
 # DATA
+data
 *.h5
 *.csv
 creators.yaml

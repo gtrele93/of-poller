@@ -11,3 +11,5 @@ WEB_DRIVER_TIMEOUT = 4
 data_file_path = Path(__file__).parent.parent.resolve() / "data" / "data.h5"
 log_file_path = Path(__file__).parent.parent.resolve() / "logs" / "log.log"
 creators_file_path = Path(__file__).parent.parent.resolve() / "src" / "creators.yaml"
+REDIS_HOST = "redis"
+REDIS_QUEUE = "queue"
