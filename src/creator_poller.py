@@ -104,7 +104,6 @@ class CreatorPoller:
         except Exception as e:
             module_logger.error("Exception while creating poller for creator %s: %s %s" % (creator, type(e), e))
             raise e
-        obj.logger.info("Using sync api for checking online status for creator %s" % obj.creator)
         with sync_playwright() as pw:
             browser = pw.firefox.launch()
             for page_url in obj.pages:

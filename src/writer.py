@@ -33,8 +33,11 @@ def init_data_file():
 
 
 def _get_redis_data(redis_connection: redis.Redis):
-    rawjob = redis_connection.brpop(REDIS_QUEUE)
-    data = msgpack.unpackb(rawjob[1])
+    rawjob = redis_connection.rpop(REDIS_QUEUE)
+    if rawjob is None:
+        module_logger.debug("No data event in queue")
+        return None
+    data = msgpack.unpackb(rawjob)
     return data
 
 
@@ -54,11 +57,13 @@ def write_to_data(redis_connection: redis.Redis):
     buffer = []
     start = time.monotonic()
     while True:
+        time.sleep(0.5)
         if (time.monotonic() - start) < WRITE_TIMER:
             module_logger.debug("Listening to queue for data events")
             data = _get_redis_data(redis_connection)
-            buffer.append(data)
-            module_logger.debug("Appended data event to buffer: %s" % data)
+            if data is not None:
+                buffer.append(data)
+                module_logger.debug("Appended data event to buffer: %s" % data)
         else:
             if buffer:
                 module_logger.info("Buffer is not empty, writing data to file")
