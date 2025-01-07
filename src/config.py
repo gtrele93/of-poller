@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 
+PROCESS_POOL_SIZE = 4
 EMAIL = os.environ.get("EMAIL")
 PASSWORD = os.environ.get("PASSWORD")
 LOG_LEVEL = "DEBUG"

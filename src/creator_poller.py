@@ -1,13 +1,13 @@
 from datetime import datetime, UTC
-from config import STATUS_POLLING_WAIT, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD, REDIS_QUEUE
+from config import STATUS_POLLING_WAIT, WEB_DRIVER_TIMEOUT, EMAIL, PASSWORD, REDIS_QUEUE, PROCESS_POOL_SIZE
 from utils import get_creator_config, get_redis_connection
 import logging
 from logger import logger as default_logger
 from pydantic import BaseModel
 from playwright.sync_api import sync_playwright
-import playwright.async_api as playwright
-import redis
+import playwright.sync_api as playwright
 import msgpack
+import multiprocessing as mp
 
 
 module_logger = logging.getLogger(f"{default_logger.name}.creator_poller")
@@ -20,13 +20,12 @@ class PollerData(BaseModel):
 
 
 class CreatorPoller:
-    def __init__(self, creator: str, pages: list[str], redis_connection: redis.Redis):
+    def __init__(self, creator: str, pages: list[str]):
         self.logger = logging.getLogger(f"{module_logger.name}.{self.__class__.__name__}")
         self.logger.info("Initializing CreatorPoller for creator %s" % creator)
         self.logger.debug("Initializing CreatorPoller for creator %s with pages %s" % (creator, pages))
         self.creator = creator
         self.pages = pages
-        self.redis_connection = redis_connection
 
     def _page_restart(self, browser: playwright.Browser, page: playwright.Page):
         self.logger.debug("Recreating page")
@@ -34,9 +33,10 @@ class CreatorPoller:
         return browser.new_page()
 
     def _redis_push(self, data: PollerData):
+        redis_connection = get_redis_connection()
         json_data = data.model_dump()
         self.logger.debug("Pushing data to redis queue: %s" % json_data)
-        self.redis_connection.lpush(REDIS_QUEUE, msgpack.packb(json_data))
+        redis_connection.lpush(REDIS_QUEUE, msgpack.packb(json_data))
 
     def login(self, page: playwright.Page):
         self.logger.debug("Logging in to OnlyFans")
@@ -52,7 +52,7 @@ class CreatorPoller:
             password.press("Enter")
             self.logger.debug("Logged in to OnlyFans")
         except playwright.TimeoutError:
-            self.logger.warning("Timeout while logging in to OnlyFans")
+            self.logger.info("Timeout while logging in to OnlyFans, no login required")
 
     def get_page_online_status(self, browser: playwright.Browser, page_url: str):
         self.logger.info("Checking page %s" % page_url)
@@ -97,32 +97,31 @@ class CreatorPoller:
         )
         self._redis_push(data_point)
 
-    def get_creator_online_status(self):
-        with sync_playwright() as p:
-            browser = p.firefox.launch()
-            for page_url in self.pages:
-                self.get_page_online_status(browser, page_url)
+    @classmethod
+    def get_creator_online_status(cls, creator, pages):
+        try:
+            obj = cls(creator, pages)
+        except Exception as e:
+            module_logger.error("Exception while creating poller for creator %s: %s %s" % (creator, type(e), e))
+            raise e
+        obj.logger.info("Using sync api for checking online status for creator %s" % obj.creator)
+        with sync_playwright() as pw:
+            browser = pw.firefox.launch()
+            for page_url in obj.pages:
+                obj.get_page_online_status(browser, page_url)
 
-def check_all_creators_online_status(redis_connection: redis.Redis):
-    creator_pollers = []
+
+def check_all_creators_online_status():
     creator_config = get_creator_config()
-    for creator in creator_config.creators:
-        while True:
-            # Sometimes OF gives an error page, keep trying until you get a login page
-            try:
-                creator_pollers.append(CreatorPoller(creator, creator_config.get_pages(creator), redis_connection))
-                break
-            except Exception as e:
-                module_logger.error("Exception while creating poller for creator %s: %s %s" % (creator, type(e), e))
-                continue
     while True:
-        for poller in creator_pollers:
-            try:
-                poller.get_creator_online_status()
-            except Exception as e:
-                module_logger.error("Exception while executing poller for creator %s: %s %s" % (creator, type(e), e))
-                raise e
+        try:
+            with mp.Pool(PROCESS_POOL_SIZE, maxtasksperchild=100) as pool:
+                module_logger.debug("Starting pool")
+                pool.starmap(CreatorPoller.get_creator_online_status, [(creator, creator_config.get_pages(creator)) for creator in creator_config.creators])
+        except Exception as e:
+            module_logger.error("Exception while executing pollers: %s %s" % (type(e), e))
+            raise e
 
 
 if __name__ == "__main__":
-    check_all_creators_online_status(get_redis_connection())
+    check_all_creators_online_status()
